@@ -78,12 +78,12 @@ widget.Title = "Tech Tree Editor"
 -- Root containers
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(1, 0, 1, 0)
-frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+frame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 frame.Parent = widget
 
 local canvas = Instance.new("ScrollingFrame")
 canvas.Size = UDim2.new(1, 0, 1, -50)
-canvas.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+canvas.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 canvas.CanvasSize = UDim2.new(2, 0, 2, 0)
 canvas.ScrollBarThickness = 6
 canvas.Parent = frame
@@ -91,9 +91,10 @@ canvas.Parent = frame
 local addButton = Instance.new("TextButton")
 addButton.Size = UDim2.new(1, 0, 0, 50)
 addButton.Position = UDim2.new(0, 0, 1, -50)
-addButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+addButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 addButton.Font = Enum.Font.SourceSansBold
 addButton.TextSize = 22
+addButton.TextColor3 = Color3.new(1,1,1)
 addButton.Text = "➕ Add Node"
 addButton.Parent = frame
 
@@ -101,12 +102,17 @@ addButton.Parent = frame
 local propertiesPanel = Instance.new("ScrollingFrame")
 propertiesPanel.Size = UDim2.new(0, 250, 1, 0)
 propertiesPanel.Position = UDim2.new(1, -250, 0, 0)
-propertiesPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+propertiesPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 propertiesPanel.ScrollBarThickness = 6
 propertiesPanel.CanvasSize = UDim2.new(0, 0, 2, 0)
 propertiesPanel.AutomaticCanvasSize = Enum.AutomaticSize.Y
 propertiesPanel.Visible = false
 propertiesPanel.Parent = frame
+
+local panelPadding = Instance.new("UIPadding")
+panelPadding.PaddingLeft = UDim.new(0,10)
+panelPadding.PaddingTop = UDim.new(0,10)
+panelPadding.Parent = propertiesPanel
 
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 0, 40)
@@ -119,9 +125,9 @@ titleLabel.Parent = propertiesPanel
 
 -- Text fields
 local function mkLabel(text, y)
-	local l = Instance.new("TextLabel")
-	l.Position = UDim2.new(0, 10, 0, y)
-	l.Size = UDim2.new(0, 230, 0, 20)
+        local l = Instance.new("TextLabel")
+        l.Position = UDim2.new(0, 0, 0, y)
+        l.Size = UDim2.new(0, 230, 0, 20)
 	l.BackgroundTransparency = 1
 	l.Text = text
 	l.TextColor3 = Color3.new(1,1,1)
@@ -131,9 +137,9 @@ local function mkLabel(text, y)
 	return l
 end
 local function mkBox(y)
-	local b = Instance.new("TextBox")
-	b.Position = UDim2.new(0, 10, 0, y)
-	b.Size = UDim2.new(0, 230, 0, 25)
+        local b = Instance.new("TextBox")
+        b.Position = UDim2.new(0, 0, 0, y)
+        b.Size = UDim2.new(0, 230, 0, 25)
 	b.Font = Enum.Font.SourceSans
 	b.TextSize = 16
 	b.TextColor3 = Color3.new(0,0,0)
@@ -146,7 +152,7 @@ mkLabel("Name:", 60)
 local nameBox = mkBox(80)
 mkLabel("Description:", 115)
 local descBox = Instance.new("TextBox")
-descBox.Position = UDim2.new(0,10,0,135)
+descBox.Position = UDim2.new(0,0,0,135)
 descBox.Size = UDim2.new(0,230,0,45)
 descBox.Font = Enum.Font.SourceSans
 descBox.TextSize = 14
@@ -162,10 +168,10 @@ local function proxyTypeChanged(v) if handleTypeChanged then handleTypeChanged(v
 local function proxyFunctionChanged(v) if handleFunctionChanged then handleFunctionChanged(v) end end
 
 local getType, setType, typeDropdown = createDropdown("Type:", {"Onetime","Repeatable"}, propertiesPanel, proxyTypeChanged)
-typeDropdown.Parent.Position = UDim2.new(0,10,0,190)
+typeDropdown.Parent.Position = UDim2.new(0,0,0,190)
 
 local getFunction, setFunction, functionDropdown = createDropdown("Function:", {"Moneyboost","Custom"}, propertiesPanel, proxyFunctionChanged)
-functionDropdown.Parent.Position = UDim2.new(0,10,0,250)
+functionDropdown.Parent.Position = UDim2.new(0,0,0,250)
 
 -- moneyBoost fields
 local blockLabel = mkLabel("Block Name:", 310)
@@ -189,12 +195,59 @@ upgradeCountBox.Visible = false
 local levelSelectLabel = mkLabel("Edit Level:", 470)
 levelSelectLabel.Visible = false
 
--- Immediate dirty marking (captures keystrokes), and ties the draft to node+level
+local function isCurrentDirty(levelOverride)
+        if not currentNode then return false end
+        local tVal = getType()
+        local level = levelOverride or ((tVal == "Repeatable") and (tonumber((function() return select(1, getLevel()) end)()) or 1) or 0)
+        local data = currentNode.data
+        local function tostr(v) return v and tostring(v) or "" end
+        if tVal == "Repeatable" then
+                data.Upgrades = data.Upgrades or {}
+                local up = data.Upgrades[level] or {}
+                if nameBox.Text ~= (up.Name or data.Name or "") then return true end
+                if descBox.Text ~= (up.Description or data.Description or "") then return true end
+                if blockBox.Text ~= (up.Block or data.Block or "") then return true end
+                if getFunction() == "Moneyboost" then
+                        if boostBox.Text ~= tostr(up.BoostedIncome or data.BoostedIncome) then return true end
+                else
+                        if eventBox.Text ~= (up.RemoteEventName or data.RemoteEventName or "") then return true end
+                end
+                local levelsNum = tonumber(upgradeCountBox.Text)
+                if levelsNum and levelsNum ~= (data.Levels or 1) then return true end
+        else
+                if nameBox.Text ~= (data.Name or "") then return true end
+                if descBox.Text ~= (data.Description or "") then return true end
+                if blockBox.Text ~= (data.Block or "") then return true end
+                if getFunction() == "Moneyboost" then
+                        if boostBox.Text ~= tostr(data.BoostedIncome) then return true end
+                else
+                        if eventBox.Text ~= (data.RemoteEventName or "") then return true end
+                end
+        end
+        return false
+end
+
+local function checkUnsaved(levelOverride)
+        if isLoading or not currentNode then
+                unsavedChanges = false
+                dirtyNode, dirtyLevel = nil, nil
+                return false
+        end
+        if isCurrentDirty(levelOverride) then
+                unsavedChanges = true
+                dirtyNode = currentNode
+                dirtyLevel = levelOverride or ((getType() == "Repeatable") and (tonumber((function() return select(1, getLevel()) end)()) or 1) or 0)
+                return true
+        else
+                unsavedChanges = false
+                dirtyNode, dirtyLevel = nil, nil
+                return false
+        end
+end
+
+-- Immediate dirty marking (captures keystrokes)
 local function markDirtyImmediate()
-	if isLoading or not currentNode then return end
-	unsavedChanges = true
-	dirtyNode = currentNode
-	dirtyLevel = (getType() == "Repeatable") and (tonumber((function() return select(1, getLevel()) end)()) or 1) or 0
+        checkUnsaved()
 end
 
 nameBox:GetPropertyChangedSignal("Text"):Connect(markDirtyImmediate)
@@ -205,31 +258,46 @@ eventBox:GetPropertyChangedSignal("Text"):Connect(markDirtyImmediate)
 
 local function onLevelChanged(txt)
 	if not currentNode then return end
-	local n = tonumber(txt) or 1
-	if n == currentLevel then return end
-	local function doSwitch()
-		currentLevel = n
-		loadLevel(currentNode, currentLevel)
-	end
-	if unsavedChanges then
-		requestSaveIfNeeded(doSwitch)
-	else
-		doSwitch()
-	end
+        local n = tonumber(txt) or 1
+        if n == currentLevel then return end
+        local prevLevel = currentLevel
+        local function doSwitch()
+                currentLevel = n
+                loadLevel(currentNode, currentLevel)
+        end
+        requestSaveIfNeeded(doSwitch, prevLevel)
 end
 
 local getLevel, setLevel, levelDropdown = createDropdown("1", {"1"}, propertiesPanel, onLevelChanged)
-levelDropdown.Parent.Position = UDim2.new(0,10,0,490)
+levelDropdown.Parent.Position = UDim2.new(0,0,0,490)
 levelDropdown.Parent.Visible = false
 
 -- Save + popup
 local saveButton = Instance.new("TextButton")
 saveButton.Size = UDim2.new(0, 120, 0, 30)
-saveButton.Position = UDim2.new(0, 10, 0, 530)
+saveButton.Position = UDim2.new(0, 0, 0, 530)
 saveButton.Text = "Save"
-saveButton.TextColor3 = Color3.new(0,0,0)
-saveButton.BackgroundColor3 = Color3.fromRGB(200,255,200)
+saveButton.TextColor3 = Color3.new(1,1,1)
+saveButton.BackgroundColor3 = Color3.fromRGB(0,200,0)
 saveButton.Parent = propertiesPanel
+
+local saveNotice = Instance.new("TextLabel")
+saveNotice.Size = UDim2.new(0, 120, 0, 20)
+saveNotice.Position = UDim2.new(0, 0, 0, 565)
+saveNotice.BackgroundTransparency = 1
+saveNotice.TextColor3 = Color3.fromRGB(0,255,0)
+saveNotice.Font = Enum.Font.SourceSans
+saveNotice.TextSize = 16
+saveNotice.Visible = false
+saveNotice.Text = "Saved!"
+saveNotice.Parent = propertiesPanel
+
+local function flashSaved()
+        saveNotice.Visible = true
+        task.delay(2, function()
+                saveNotice.Visible = false
+        end)
+end
 
 local popupOverlay = Instance.new("Frame")
 popupOverlay.Size = UDim2.new(1,0,1,0)
@@ -263,8 +331,8 @@ local savePopupButton = Instance.new("TextButton")
 savePopupButton.Size = UDim2.new(0, 70, 0, 30)
 savePopupButton.Position = UDim2.new(0, 10, 0, 90)
 savePopupButton.Text = "Save"
-savePopupButton.BackgroundColor3 = Color3.fromRGB(200,255,200)
-savePopupButton.TextColor3 = Color3.new(0,0,0)
+savePopupButton.BackgroundColor3 = Color3.fromRGB(0,200,0)
+savePopupButton.TextColor3 = Color3.new(1,1,1)
 savePopupButton.ZIndex = 103
 savePopupButton.Parent = popupBox
 
@@ -272,8 +340,8 @@ local discardPopupButton = Instance.new("TextButton")
 discardPopupButton.Size = UDim2.new(0, 80, 0, 30)
 discardPopupButton.Position = UDim2.new(0, 90, 0, 90)
 discardPopupButton.Text = "Discard"
-discardPopupButton.BackgroundColor3 = Color3.fromRGB(255,200,200)
-discardPopupButton.TextColor3 = Color3.new(0,0,0)
+discardPopupButton.BackgroundColor3 = Color3.fromRGB(200,0,0)
+discardPopupButton.TextColor3 = Color3.new(1,1,1)
 discardPopupButton.ZIndex = 103
 discardPopupButton.Parent = popupBox
 
@@ -281,8 +349,8 @@ local cancelPopupButton = Instance.new("TextButton")
 cancelPopupButton.Size = UDim2.new(0, 70, 0, 30)
 cancelPopupButton.Position = UDim2.new(0, 180, 0, 90)
 cancelPopupButton.Text = "Cancel"
-cancelPopupButton.BackgroundColor3 = Color3.fromRGB(200,200,255)
-cancelPopupButton.TextColor3 = Color3.new(0,0,0)
+cancelPopupButton.BackgroundColor3 = Color3.fromRGB(0,0,200)
+cancelPopupButton.TextColor3 = Color3.new(1,1,1)
 cancelPopupButton.ZIndex = 103
 cancelPopupButton.Parent = popupBox
 
@@ -394,7 +462,7 @@ local function loadNode(nodeEntry)
 	for _, child in ipairs(levelDropdown.Parent:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
 	local opts = {}; for i=1,maxLevel do opts[#opts+1]=tostring(i) end
 	getLevel, setLevel, levelDropdown = createDropdown("", opts, propertiesPanel, onLevelChanged)
-	levelDropdown.Parent.Position = UDim2.new(0,10,0,490)
+        levelDropdown.Parent.Position = UDim2.new(0,0,0,490)
 	levelDropdown.Parent.Visible = isRepeat
 	currentLevel = 1
 	setLevel(opts[1] or "1", true)
@@ -405,36 +473,38 @@ local function loadNode(nodeEntry)
 end
 
 -- Save prompt
-local function requestSaveIfNeeded(proceed)
-	if not unsavedChanges then proceed(); return end
-	popupOverlay.Visible = true
-	popupBox.Visible = true
-	pendingAction = proceed
+local function requestSaveIfNeeded(proceed, levelOverride)
+        if not checkUnsaved(levelOverride) then proceed(); return end
+        popupOverlay.Visible = true
+        popupBox.Visible = true
+        pendingAction = proceed
 end
 
 -- Popup buttons
 savePopupButton.MouseButton1Click:Connect(function()
-	if currentNode then saveCurrentLevelData(currentNode) end
-	popupBox.Visible = false
-	popupOverlay.Visible = false
-	local action = pendingAction; pendingAction = nil
-	if action then action() end
+        if dirtyNode or currentNode then saveCurrentLevelData(dirtyNode or currentNode) end
+        flashSaved()
+        popupBox.Visible = false
+        popupOverlay.Visible = false
+        local action = pendingAction; pendingAction = nil
+        if action then action() end
 end)
 
 discardPopupButton.MouseButton1Click:Connect(function()
-	unsavedChanges = false
-	dirtyNode, dirtyLevel = nil, nil
-	if currentNode then loadLevel(currentNode, tonumber((function() return select(1, getLevel()) end)()) or 1) end
-	popupBox.Visible = false
-	popupOverlay.Visible = false
-	local action = pendingAction; pendingAction = nil
-	if action then action() end
+        unsavedChanges = false
+        dirtyNode, dirtyLevel = nil, nil
+        if currentNode then loadLevel(currentNode, tonumber((function() return select(1, getLevel()) end)()) or 1) end
+        popupBox.Visible = false
+        popupOverlay.Visible = false
+        local action = pendingAction; pendingAction = nil
+        if action then action() end
 end)
 
 cancelPopupButton.MouseButton1Click:Connect(function()
-	popupBox.Visible = false
-	popupOverlay.Visible = false
-	pendingAction = nil
+        popupBox.Visible = false
+        popupOverlay.Visible = false
+        pendingAction = nil
+        setLevel(tostring(currentLevel), true)
 end)
 
 -- Count change => rebuild level dropdown and mark unsaved
@@ -450,14 +520,13 @@ upgradeCountBox.FocusLost:Connect(function()
 		for _, child in ipairs(levelDropdown.Parent:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
 		local opts = {}; for i=1,n do opts[i]=tostring(i) end
 		getLevel, setLevel, levelDropdown = createDropdown("", opts, propertiesPanel, onLevelChanged)
-		levelDropdown.Parent.Position = UDim2.new(0,10,0,490)
+                levelDropdown.Parent.Position = UDim2.new(0,0,0,490)
 		levelDropdown.Parent.Visible = true
 		if currentLevel > n then currentLevel = n end
-		setLevel(tostring(currentLevel), true)
-		loadLevel(currentNode, currentLevel)
-		unsavedChanges = true
-		dirtyNode = currentNode; dirtyLevel = (getType()=="Repeatable") and currentLevel or 0
-	end
+                setLevel(tostring(currentLevel), true)
+                loadLevel(currentNode, currentLevel)
+                checkUnsaved()
+        end
 end)
 
 -- Dropdown handlers (dirty only when actual change and not loading)
@@ -470,24 +539,25 @@ handleTypeChanged = function(newVal)
 	upgradeCountBox.Visible    = isRepeat
 	levelSelectLabel.Visible   = isRepeat
 	levelDropdown.Parent.Visible = isRepeat
-	if not isLoading and prev ~= newVal then
-		unsavedChanges = true; dirtyNode = currentNode; dirtyLevel = (newVal == "Repeatable") and (tonumber((function() return select(1, getLevel()) end)()) or 1) or 0
-	end
+        if not isLoading and prev ~= newVal then
+                checkUnsaved()
+        end
 end
 
 handleFunctionChanged = function(newVal)
 	if not currentNode then return end
 	local prev = currentNode.data.Function
 	currentNode.data.Function = newVal
-	setFunctionFieldsVisible(newVal)
-	if not isLoading and prev ~= newVal then
-		unsavedChanges = true; dirtyNode = currentNode; dirtyLevel = (getType() == "Repeatable") and (tonumber((function() return select(1, getLevel()) end)()) or 1) or 0
-	end
+        setFunctionFieldsVisible(newVal)
+        if not isLoading and prev ~= newVal then
+                checkUnsaved()
+        end
 end
 
 -- Save button
 saveButton.MouseButton1Click:Connect(function()
-	if currentNode then saveCurrentLevelData(currentNode) end
+        if currentNode then saveCurrentLevelData(currentNode) end
+        flashSaved()
 end)
 
 -- Node creation
@@ -496,7 +566,7 @@ local function createNode()
 	local node = Instance.new("Frame")
 	node.Size = UDim2.new(0, 150, 0, 100)
 	node.Position = UDim2.new(0, 80 * nodeId, 0, 80 * nodeId)
-	node.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+        node.BackgroundColor3 = Color3.fromRGB(80, 120, 180)
 	node.BorderSizePixel = 1
 	node.Active = true
 	node.Name = "Node_" .. nodeId
@@ -547,7 +617,7 @@ local function createNode()
 				propertiesPanel.Visible = true
 				loadNode(nodes[node.Name])
 			end
-			if unsavedChanges then requestSaveIfNeeded(go) else go() end
+                        requestSaveIfNeeded(go)
 		end
 	end)
 end
